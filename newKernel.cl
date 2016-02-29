@@ -17,36 +17,31 @@ __kernel void layer_one_conv (	__global const float *in,
 	//Weight is a 4D matrix sized 11 x 11 x 3 x 96
 	//Bias is a 4D matrix sized 1 x 1 x 1 x 3
 	
-	//How big will the pixel buffer need to be in order to process a frame at a time?
-	int rows[(K*(K-1)) + K];
-	int count = -((K*(K-1)) + K);
+	const int Win = 227, Hin = 227, N = 3, M = 96, K = 11, S = 4, pad = 0;
+	int Wout = (Win + 2 * pad - K) / S + 1;
+	int	Hout = (Hin + 2 * pad - K) / S + 1;
+	int w = 0, h = 0, m, n, i, j; 
 	
-	while(count != 227*227*3) {
-		//What will happen in this while loop
-		//1. Shift new pixel into the buffer based on stride (1 for now)
-		//2. Once enough have been shifted in, calculate output with weights on the frame
-		//3. Repeat
-		
-		#pragma unroll
-		for(int i = 227; i > 0; --i) {
-			rows[i] = rows[i-1];
-		}
-		rows[0] = count >= 0 ? in[count] : 0;
-		
-		//Initialize any variables needed within unroll 
-		
-		#pragma unroll
-		for(int i = 0; i < (width of weight); ++i) {
-			#pragma unroll
-			for(int j = 0; j < (height of weight); ++j) {
-				//read data from in buffer and work with it
-				//Add/multiply weights etc
+	for(i = 0; i < K; i++) {							//Since i and j are generally small (between 0-11)
+		for(j = 0; j < K; j++) {						//They do not need to be unrolled
+			for(w = 0; w < Wout; w++) {	
+				for(h = 0; h < Hout; h++) {
+					#pragma unroll
+					for(m = 0; m < M, m++) {
+						#pragma unroll
+						for(n = 0; n < N; n++) {
+							#pragma unroll 
+							{
+								out[(w)+(Wout*h)+(Wout*Hout*m)] += 					//output_fm
+								in[(w*S+i-pad)+Win*(h*S+j-pad)+(Win*Hin*n)] *		//input_fm
+								weight[(i)+(K*j)+(K*K*n)+(K*K*N*m)];				//weights
+							}
+						}
+					}
+				}
 			}
 		}
-		
-		//Apply bias here?
 	}
-	
 }
 
 /*const int Win = 227, Hin = 227, N = 3, M = 96, K = 11, S = 4, pad = 0;
@@ -54,14 +49,12 @@ int Wout = (Win + 2 * pad - K) / S + 1;
 int	Hout = (Hin + 2 * pad - K) / S + 1;
 int w = 0, h = 0, m, n, i, j; 
 
-for(w = 0; w < Wout; w++ ) { //Wout
-	for(h = 0; h < Hout; h++ ) { //Hout
-		for(m = 0; m < M; m++ ) { //M
-			for(n = 0; n < N; n++ ) {
-				for(i = 0; i < K; i++ ) {
-					for(j = 0; j < K; j++){
-						if((w*S+i-pad<0) || (w*S+i-pad >= Win) ||
-							(h*S+j-pad < 0) || (h*S+j-pad >= Hin)) continue;
+for(w = 0; w < Wout; w++ ) { //Wout				//row
+	for(h = 0; h < Hout; h++ ) { //Hout			//col
+		for(m = 0; m < M; m++ ) { //M			//to
+			for(n = 0; n < N; n++ ) {			//ti
+				for(i = 0; i < K; i++ ) { 		//i	
+					for(j = 0; j < K; j++){ 	//j
 						out[(w)+(Wout*h)+(Wout*Hout*m)] += 
 						in[(w*S+i-pad)+Win*(h*S+j-pad)+(Win*Hin*n)] *
 						weight[(i)+(K*j)+(K*K*n)+(K*K*N*m)];

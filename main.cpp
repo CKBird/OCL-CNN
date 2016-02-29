@@ -40,9 +40,9 @@ scoped_array<cl_mem> output_buffer;				//Stores output of each kernel
 
 //Problem Data
 unsigned N = 0;									//Command line options for changing problem if needed
-scoped_array<scoped_aligned_ptr<float>>	input_a, input_b, input_c;	//Stores image, weight, bias data from input
-scoped_array<scoped_aligned_ptr<float>> output;	//Stores output values 
-scoped_array<scoped_array<float>> ref_output;	//Unused, but can be used to check values before completion
+scoped_array<scoped_aligned_ptr<float> >	input_a, input_b, input_c;	//Stores image, weight, bias data from input
+scoped_array<scoped_aligned_ptr<float> > output;	//Stores output values 
+scoped_array<scoped_array<float> > ref_output;	//Unused, but can be used to check values before completion
 scoped_array<unsigned> n_per_device;			//Sets number of values used per device based on available
 
 //Function Prototypes
@@ -134,7 +134,7 @@ bool init_opencl() {
 												&status);					//Error code if not successful
 		checkError(status, "Failed to create command queue");
 	
-		const char *kernel_name = "layer_one_conv";
+		const char *kernel_name = "layer_one";
 		kernel[i] = clCreateKernel(	program, 		//Program to execute kernel
 									kernel_name, 	//Which kernel to create
 									&status);		//Error code if not successful
@@ -152,7 +152,7 @@ bool init_opencl() {
 		input_b_buffer[i] = clCreateBuffer(context, CL_MEM_READ_ONLY, n_per_device[i] * sizeof(float), NULL, &status);
 		checkError(status, "Failed to create buffer for input B");
 		
-		input_c_buffer[i] = clCreateBuffer(context, CL_MEM_READ_ONLY, n_per_device[i] * sizeof(float), NULL &status);
+		input_c_buffer[i] = clCreateBuffer(context, CL_MEM_READ_ONLY, n_per_device[i] * sizeof(float), NULL, &status);
 		checkError(status, "Failed to create buffer for input C");
 		
 		output_buffer[i] = clCreateBuffer(context, CL_MEM_WRITE_ONLY, n_per_device[i] * sizeof(float), NULL, &status);
@@ -192,7 +192,7 @@ void init_problem() {
 		for(unsigned j = 0; j < n_per_device[i]; ++j) {	//Read in all data
 			myfile >> data;
 			myfile2 >> bias;
-			myfile3 >> weights;
+			myfile3 >> weight;
 			input_a[i][j] = data;
 			input_b[i][j] = bias;
 			input_c[i][j] = weight;
@@ -208,7 +208,7 @@ void run() {
 	cl_int status;
 	const double start_time = getCurrentTimestamp();
 	
-	scaped_array<cl_event> kernel_event(values);			//List of kernel events
+	scoped_array<cl_event> kernel_event(values);			//List of kernel events
 	scoped_array<cl_event> kernel_finish_event(values);		//List of finished kernel events
 	scoped_array<cl_event> write_event(3);					//Overall event waitlist
 	
@@ -289,7 +289,7 @@ void run() {
 	
 	printf("Timing Finish.");
 	
-	const double end_time = getCurrentTimeStamp();
+	const double end_time = getCurrentTimestamp();
 	
 	printf("\nFinal Time: %0.3f ms\n", (end_time - start_time) * 1e3);
 	
